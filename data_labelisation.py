@@ -2,18 +2,89 @@ import pandas as pd
 import os
 import tkinter as tk
 from PIL import Image, ImageTk
+import pdfplumber
 
 compteur_pages_traitees = 0
 valide = []
 
-def chemin_image_html(chm):
-    return '<img src="'+ chm + '" width="500">'+chm+'</img>'
+def fichiers_cibles(chm):
 
-def charger_page_random(n):
+        dossier = str(chm)
+        liste_fichiers = os.listdir(dossier)
+        noms_fichiers = list()
+        for entry in liste_fichiers:
+            chemin = os.path.join(dossier,entry)
+            if os.path.isdir(chemin):
+                noms_fichiers = noms_fichiers + fichiers_cibles(chemin)
+            else:
+                noms_fichiers.append(chemin)          
+        return noms_fichiers
 
-    pages = pd.read_html('PAGES.html',encoding='utf-8')
 
-    selection = pages[0].sample(n,replace=False)
+def extraction_data_page(chemin):
+
+    noms_fichiers = fichiers_cibles(chemin)
+    liste_pages = []
+    numeros_pages = []
+    chemins = []
+
+    for nom in noms_fichiers:
+
+        try:
+
+            with pdfplumber.open(nom) as pdf:
+
+                pages_doc = pdf.pages
+                cpt_pages = 0
+
+
+                for page in pages_doc:
+                    
+                    cpt_pages +=1
+
+                    if len(page.chars) > 0:
+
+                        df = pd.DataFrame.from_dict(page.chars)
+
+                        car = list(df['text'].values)
+                        x_car = list(df['x0'].values)
+                        y_car = list(df['y0'].values)
+                        size_car = list(df['size'].values)
+
+                        df_chars = pd.DataFrame(dict(caractere=car,x_car=x_car,y_car=y_car,size_car=size_car))
+                        
+                        csv_char = df_chars.to_csv(index=False)
+
+                        liste_pages.append(csv_char)
+
+                        chemins.append(nom)
+                        
+                        numeros_pages.append(cpt_pages)
+                    
+                        #capture_ecran = page.to_image(resolution=95)
+                        nom_tronc = os.path.split(nom)
+                        #chemin_capture = os.path.join("IMAGES_DUMP",(nom_tronc[-1]+str(cpt_pages)+".png"))
+                        #capture_ecran.save(chemin_capture)
+                        #chemins_captures_html.append(chemin_image_html(chemin_capture))
+
+
+        except:
+
+            continue
+
+    pages = pd.DataFrame(dict(chemin_fichier=chemins,numero_page=numeros_pages, caractères=liste_pages))
+
+    html = pages.to_html(escape=False)
+
+    with open("PAGES.html", "w", encoding="utf-8") as file:
+        file.write(html)
+
+    return pages
+
+
+def charger_page_random(n,pages):
+
+    selection = pages.sample(n,replace=False)
     
     return selection
 
@@ -23,12 +94,20 @@ def debut_labelisation(n,frame,label):
 
     n = int(n.get())
 
-    dataframe = charger_page_random(n)
-    chm_premiere_image = dataframe['captures'].values[0]
-    longueur = len(dataframe['captures'].values)
+    pages = extraction_data_page('PDF_TEST')
+
+    dataframe = charger_page_random(n,pages)
+
+    f_origine = dataframe['chemin_fichier'].values[0]
+    n_page= dataframe['numero_page'].values[0]
+    longueur = len(dataframe['chemin_fichier'].values)
+
+    with pdfplumber.open(f_origine) as pdf:
+
+        fst_page = pdf.pages[n_page-1]
+        im = (fst_page.to_image(resolution=95)).original
     
 
-    im = Image.open(chm_premiere_image)
     im.thumbnail((600,600),Image.ANTIALIAS)
     img = ImageTk.PhotoImage(im)
     frame.configure(image=img)
@@ -45,8 +124,14 @@ def suivant(resultat,frame,label):
 
         compteur_pages_traitees += 1
 
-        chm_img = dataframe['captures'].values[compteur_pages_traitees]
-        im = Image.open(chm_img)
+        f_path = dataframe['chemin_fichier'].values[compteur_pages_traitees]
+        n_page= dataframe['numero_page'].values[compteur_pages_traitees]
+
+        with pdfplumber.open(f_path) as pdf:
+
+            page = pdf.pages[n_page-1]
+            im = (page.to_image(resolution=95)).original
+
         im.thumbnail((600,600),Image.ANTIALIAS)
         img = ImageTk.PhotoImage(im)
 
@@ -69,12 +154,12 @@ def suivant(resultat,frame,label):
 
         if resultat == 1:
             
-            valide.append("valide")
+            valide.append(1)
 
 
         else:
 
-            valide.append("non valide")
+            valide.append(0)
 
 
         img = ImageTk.PhotoImage(Image.open('default.png'))
