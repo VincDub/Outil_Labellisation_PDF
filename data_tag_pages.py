@@ -65,7 +65,7 @@ def extraction_data_page(chemin):
                         
                         numeros_pages.append(cpt_pages)
                     
-                        capture_ecran = page.to_image(resolution=120)
+                        capture_ecran = page.to_image(resolution=95)
                         nom_tronc = os.path.split(nom)
                         chemin_capture = os.path.join("IMAGES_DUMP",(nom_tronc[-1]+str(cpt_pages)+".png"))
                         capture_ecran.save(chemin_capture)
