@@ -28,7 +28,7 @@ def extraction_data_page(chemin):
     numeros_pages = []
     chemins = []
 
-    for nom in noms_fichiers:
+    for ind,nom in enumerate(noms_fichiers):
 
         try:
 
@@ -36,7 +36,6 @@ def extraction_data_page(chemin):
 
                 pages_doc = pdf.pages
                 cpt_pages = 0
-
 
                 for page in pages_doc:
                     
@@ -61,11 +60,9 @@ def extraction_data_page(chemin):
                         
                         numeros_pages.append(cpt_pages)
                     
-                        #capture_ecran = page.to_image(resolution=95)
-                        nom_tronc = os.path.split(nom)
-                        #chemin_capture = os.path.join("IMAGES_DUMP",(nom_tronc[-1]+str(cpt_pages)+".png"))
-                        #capture_ecran.save(chemin_capture)
-                        #chemins_captures_html.append(chemin_image_html(chemin_capture))
+                    print("doc %d / %d (%s): page %d " %(ind, len(noms_fichiers),nom,cpt_pages))
+
+
 
 
         except:
@@ -88,13 +85,21 @@ def charger_page_random(n,pages):
     
     return selection
 
-def debut_labelisation(n,frame,label):
+def debut_labelisation(n,frame,label,df_bool):
+
+    df_bool = df_bool.get()
 
     global dataframe,longueur
 
     n = int(n.get())
 
-    pages = extraction_data_page('PDF_TEST')
+    if df_bool == True:
+
+        pages = pd.read_html('PAGES.html',encoding='utf-8')[0]
+
+    else:
+
+        pages = extraction_data_page('PDF')
 
     dataframe = charger_page_random(n,pages)
 
@@ -182,7 +187,7 @@ def suivant(resultat,frame,label):
 fen = tk.Tk()
 
 fen.title('Outil de labelisation de pages de PDF')
-fen.geometry('700x1000')
+fen.geometry('700x1100')
 
 ## inputs
 
@@ -215,6 +220,14 @@ samples.pack(fill=tk.X, expand = 'yes', pady=10)
 n_samples = tk.Spinbox(samples, from_=2 ,to=90000000)
 n_samples.pack(pady=10)
 
-btn_start = tk.Button(frame_input, relief = tk.GROOVE,text='Démarrer la labelisation',bg='green', command=(lambda : debut_labelisation(n_samples,capture_label,log)))
+df = tk.BooleanVar()
+
+df_true = tk.Radiobutton(frame_input,text="Charger la dataframe 'PAGES.html' existante", variable=df, value=True,fg = '#232323')
+df_true.pack(pady=5)
+
+df_false= tk.Radiobutton(frame_input,text="Générer une nouvelle dataframe 'PAGES.html'", variable=df, value=False,fg = '#232323')
+df_false.pack(pady=5)
+
+btn_start = tk.Button(frame_input, relief = tk.GROOVE,text='Démarrer la labelisation',bg='green', command=(lambda : debut_labelisation(n_samples,capture_label,log,df)))
 btn_start.pack(pady=10)
 fen.mainloop()
