@@ -60,7 +60,7 @@ def extraction_data_page(chemin):
                         
                         numeros_pages.append(cpt_pages)
                     
-                    print("doc %d / %d (%s): page %d " %(ind, len(noms_fichiers),nom,cpt_pages))
+                    print("doc %d / %d (%s): page %d " %((ind+1), len(noms_fichiers),nom,cpt_pages))
 
 
 
